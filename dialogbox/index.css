@@ -1,39 +1,87 @@
+:root {
+    color-scheme: light;
+    font-family: "Segoe UI", Tahoma, sans-serif;
+}
+
 body {
-    font-family: Arial, sans-serif;
+    margin: 0;
+    min-width: 360px;
+    background: #f5f7fb;
+    color: #101828;
 }
 
-/* Overlay */
-.overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
+.app {
+    padding: 14px;
 }
 
-/* Hide utility */
-.hidden {
-    display: none;
+h1 {
+    margin: 0;
+    font-size: 18px;
 }
 
-/* Dialog box */
-.dialog {
-    background: white;
-    padding: 20px;
+.subtitle {
+    margin: 6px 0 12px;
+    font-size: 13px;
+    color: #475467;
+}
+
+label,
+h2 {
+    font-size: 13px;
+    margin-bottom: 6px;
+}
+
+textarea {
+    width: 100%;
+    box-sizing: border-box;
+    resize: vertical;
+    border: 1px solid #d0d5dd;
     border-radius: 8px;
-    width: 300px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-    animation: fadeIn 0.2s ease;
+    padding: 10px;
+    font-size: 13px;
+    background: #fff;
 }
 
-@keyframes fadeIn {
-    from {
-        transform: scale(0.95);
-        opacity: 0;
-    }
-    to {
-        transform: scale(1);
-        opacity: 1;
-    }
+.actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+button {
+    border: 1px solid #d0d5dd;
+    background: #fff;
+    border-radius: 8px;
+    padding: 8px 10px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+button#explainBtn {
+    background: #0f62fe;
+    border-color: #0f62fe;
+    color: #fff;
+}
+
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.status {
+    min-height: 18px;
+    margin: 10px 0;
+    font-size: 12px;
+    color: #475467;
+}
+
+.result {
+    margin-top: 6px;
+    background: #fff;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 13px;
+    line-height: 1.45;
+    white-space: pre-wrap;
 }

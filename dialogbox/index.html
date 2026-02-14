@@ -1,22 +1,35 @@
 <!doctype html>
-<html lang="en">
+<html lang="ja">
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Simple Dialog Component</title>
+        <title>ClarifAI</title>
         <link rel="stylesheet" href="index.css" />
     </head>
     <body>
-        <button id="openDialogBtn">Open Dialog</button>
+        <main class="app">
+            <h1>ClarifAI</h1>
+            <p class="subtitle">選択テキストを簡単に説明します。</p>
 
-        <!-- Dialog Component -->
-        <div id="dialogOverlay" class="overlay hidden">
-            <div class="dialog">
-                <h2>Simple Dialog</h2>
-                <p>This is a reusable dialog component.</p>
-                <button id="closeDialogBtn">Close</button>
+            <label for="sourceText">説明したいテキスト</label>
+            <textarea
+                id="sourceText"
+                rows="5"
+                placeholder="ページで選択して『選択を読み込む』を押すか、直接入力してください"
+            ></textarea>
+
+            <div class="actions">
+                <button id="useSelectionBtn" type="button">選択を読み込む</button>
+                <button id="explainBtn" type="button">説明する</button>
             </div>
-        </div>
+
+            <p id="status" class="status" aria-live="polite"></p>
+
+            <section>
+                <h2>説明結果</h2>
+                <div id="result" class="result">まだ結果はありません。</div>
+            </section>
+        </main>
 
         <script src="index.js"></script>
     </body>

@@ -1,7 +1,7 @@
 {
     "name": "clarifai",
     "version": "1.0.0",
-    "description": "Chrome extension that explains unfamiliar words, phrases, and text in simple terms, in the same language.",
+    "description": "Chrome extension that explains unfamiliar words, phrases, and text in simple terms, in English.",
     "homepage": "https://github.com/andr-work/ClarifAI#readme",
     "bugs": {
         "url": "https://github.com/andr-work/ClarifAI/issues"

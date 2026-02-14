@@ -2,11 +2,29 @@
     "name": "ClarifAI",
     "version": "0.1",
     "manifest_version": 3,
-    "description": "Chrome extension that explains unfamiliar words, phrases, and text in simple terms, in the same language.",
+    "description": "Chrome extension that explains unfamiliar words, phrases, and text in simple terms, in English.",
+    "icons": {
+        "16": "images/icon16.png",
+        "32": "images/icon32.png",
+        "48": "images/icon48.png",
+        "128": "images/icon128.png"
+    },
+    "web_accessible_resources": [
+        {
+            "resources": ["images/*"],
+            "matches": ["<all_urls>"]
+        }
+    ],
+    "content_scripts": [
+        {
+            "js": ["scripts/content.js"],
+            "matches": ["<all_urls>"]
+        }
+    ],
     "background": {
         "service_worker": "background.js"
     },
-    "permissions": ["storage", "contextMenus"],
+    "permissions": ["storage", "contextMenus", "tabs", "activeTab"],
     "host_permissions": ["http://*/*", "https://*/*"],
     "action": {
         "default_icon": {
