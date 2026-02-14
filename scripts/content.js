@@ -11,10 +11,15 @@ function setupClarifaiFloatingUI() {
     let selectedText = "";
     let selectionTimer = null;
     let requestCounter = 0;
+    let lastPointerX = null;
+    let lastPointerY = null;
+    let isMouseSelecting = false;
 
     const root = document.createElement("div");
     root.id = ROOT_ID;
     root.style.display = "none";
+    root.style.position = "absolute";
+    root.style.zIndex = "2147483647";
 
     const iconButton = document.createElement("button");
     iconButton.className = "clarifai-icon";
@@ -29,8 +34,8 @@ function setupClarifaiFloatingUI() {
 
     panel.innerHTML = `
         <button class="clarifai-close" type="button" aria-label="Close">×</button>
-        <p class="clarifai-origin"></p>
         <div class="clarifai-main">
+            <div class="clarifai-selected"></div>
             <div class="clarifai-loading" aria-live="polite">
                 <span class="clarifai-loader-dot"></span>
                 <span class="clarifai-loader-dot"></span>
@@ -46,7 +51,7 @@ function setupClarifaiFloatingUI() {
     `;
 
     const closeButton = panel.querySelector(".clarifai-close");
-    const originEl = panel.querySelector(".clarifai-origin");
+    const selectedEl = panel.querySelector(".clarifai-selected");
     const posEl = panel.querySelector(".clarifai-pos");
     const resultEl = panel.querySelector(".clarifai-result");
     const loadingEl = panel.querySelector(".clarifai-loading");
@@ -55,7 +60,7 @@ function setupClarifaiFloatingUI() {
 
     root.appendChild(iconButton);
     root.appendChild(panel);
-    document.documentElement.appendChild(root);
+    (document.body || document.documentElement).appendChild(root);
 
     function normalizeInput(value) {
         return (value || "").trim().slice(0, 2000);
@@ -122,7 +127,7 @@ function setupClarifaiFloatingUI() {
 
     function renderExplanation(data) {
         loadingEl.style.display = "none";
-        originEl.textContent = data.originText || "";
+        selectedEl.textContent = data.originText || selectedText || "";
         posEl.textContent = data.partOfSpeech || "";
         posEl.style.display = data.partOfSpeech ? "inline-block" : "none";
         resultEl.textContent = data.description || "";
@@ -196,26 +201,56 @@ function setupClarifaiFloatingUI() {
             return;
         }
 
-        const margin = 12;
+        const margin = 10;
         const panelWidth = 360;
         const iconSize = 32;
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
+        const scrollX = window.scrollX || window.pageXOffset || 0;
+        const scrollY = window.scrollY || window.pageYOffset || 0;
+        const viewportLeft = scrollX;
+        const viewportTop = scrollY;
+        const viewportRight = scrollX + window.innerWidth;
+        const viewportBottom = scrollY + window.innerHeight;
+        const hasPointer =
+            Number.isFinite(lastPointerX) && Number.isFinite(lastPointerY);
 
-        let left = rect.right + margin;
-        if (left + panelWidth > viewportWidth - margin) {
-            left = viewportWidth - panelWidth - margin;
+        const pointerLeft = hasPointer ? lastPointerX + scrollX : rect.right + scrollX;
+        const pointerTop = hasPointer ? lastPointerY + scrollY : rect.bottom + scrollY;
+
+        let left = pointerLeft + margin;
+        let top = pointerTop + margin;
+
+        if (left + panelWidth > viewportRight - margin) {
+            left = viewportRight - panelWidth - margin;
         }
-        if (left < margin) {
-            left = margin;
+        if (left < viewportLeft + margin) {
+            left = viewportLeft + margin;
         }
 
-        let top = rect.bottom + margin;
-        if (top + iconSize > viewportHeight - margin) {
-            top = rect.top - iconSize - margin;
+        if (top + iconSize > viewportBottom - margin) {
+            top = rect.top + scrollY - iconSize - margin;
         }
-        if (top < margin) {
-            top = margin;
+        if (top < viewportTop + margin) {
+            top = viewportTop + margin;
+        }
+
+        const iconRight = left + iconSize;
+        const iconBottom = top + iconSize;
+        const overlapsSelection =
+            iconRight > rect.left &&
+            left < rect.right &&
+            iconBottom > rect.top &&
+            top < rect.bottom;
+
+        if (overlapsSelection) {
+            const belowTop = rect.bottom + scrollY + margin;
+            const aboveTop = rect.top + scrollY - iconSize - margin;
+            if (belowTop + iconSize <= viewportBottom - margin) {
+                top = belowTop;
+            } else if (aboveTop >= viewportTop + margin) {
+                top = aboveTop;
+            } else {
+                top = viewportTop + margin;
+            }
         }
 
         root.style.left = `${left}px`;
@@ -283,8 +318,8 @@ function setupClarifaiFloatingUI() {
         showIcon();
         showPanel();
         setStatus("説明を生成中...");
+        selectedEl.textContent = input;
         loadingEl.style.display = "flex";
-        originEl.textContent = input;
         posEl.style.display = "none";
         resultEl.textContent = "";
         similarEl.innerHTML = "";
@@ -319,7 +354,29 @@ function setupClarifaiFloatingUI() {
         hidePanel();
     });
 
-    document.addEventListener("selectionchange", scheduleSelectionUpdate, true);
+    document.addEventListener(
+        "mousedown",
+        (event) => {
+            if (root.contains(event.target)) {
+                return;
+            }
+
+            isMouseSelecting = true;
+        },
+        true,
+    );
+
+    document.addEventListener(
+        "selectionchange",
+        () => {
+            if (isMouseSelecting) {
+                return;
+            }
+            scheduleSelectionUpdate();
+        },
+        true,
+    );
+
     document.addEventListener(
         "mouseup",
         (event) => {
@@ -327,22 +384,35 @@ function setupClarifaiFloatingUI() {
                 return;
             }
 
+            isMouseSelecting = false;
+            lastPointerX = event.clientX;
+            lastPointerY = event.clientY;
             scheduleSelectionUpdate();
         },
         true,
     );
 
-    window.addEventListener("resize", () => {
-        if (root.style.display !== "none") {
-            positionRootNearSelection();
-        }
-    });
+    document.addEventListener(
+        "mousedown",
+        (event) => {
+            if (panel.style.display === "none") {
+                return;
+            }
 
-    window.addEventListener(
-        "scroll",
-        () => {
-            if (root.style.display !== "none") {
-                positionRootNearSelection();
+            if (panel.contains(event.target) || iconButton.contains(event.target)) {
+                return;
+            }
+
+            hidePanel();
+        },
+        true,
+    );
+
+    document.addEventListener(
+        "keydown",
+        (event) => {
+            if (event.key === "Escape") {
+                isMouseSelecting = false;
             }
         },
         true,
@@ -392,14 +462,13 @@ function injectStyle() {
     style.id = STYLE_ID;
     style.textContent = `
         #${ROOT_ID} {
-            position: fixed;
             left: 12px;
             top: 12px;
-            z-index: 2147483647;
             font-family: "Segoe UI", Tahoma, sans-serif;
             width: 0;
             height: 0;
             overflow: visible;
+            pointer-events: none;
         }
 
         #${ROOT_ID} .clarifai-icon {
@@ -409,58 +478,88 @@ function injectStyle() {
             width: 32px;
             height: 32px;
             border: none;
-            border-radius: 999px;
-            background: #ffffff;
+            border-radius: 0;
+            background: transparent;
             color: #101828;
             cursor: pointer;
-            font-size: 18px;
+            display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 8px 20px rgba(16, 24, 40, 0.2);
             padding: 0;
+            line-height: 0;
+            pointer-events: auto;
         }
 
         #${ROOT_ID} .clarifai-icon img {
-            width: 24px;
-            height: 24px;
+            width: 100%;
+            height: 100%;
             display: block;
         }
 
         #${ROOT_ID} .clarifai-panel {
             position: absolute;
             left: 0;
-            top: 40px;
+            top: 42px;
             width: min(360px, calc(100vw - 32px));
             background: #fff;
             border: 1px solid #d0d5dd;
             border-radius: 16px;
             box-shadow: 0 12px 30px rgba(16, 24, 40, 0.16);
-            padding: 14px;
+            padding: 12px;
             color: #101828;
-            position: relative;
+            box-sizing: border-box;
+            overflow: visible;
+            pointer-events: auto;
+        }
+
+        #${ROOT_ID} .clarifai-panel::before {
+            content: "";
+            position: absolute;
+            top: -10px;
+            left: 10px;
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-bottom: 10px solid #d0d5dd;
+        }
+
+        #${ROOT_ID} .clarifai-panel::after {
+            content: "";
+            position: absolute;
+            top: -8px;
+            left: 11px;
+            width: 0;
+            height: 0;
+            border-left: 7px solid transparent;
+            border-right: 7px solid transparent;
+            border-bottom: 9px solid #fff;
+        }
+
+        #${ROOT_ID} .clarifai-main {
+            margin-top: 0;
+        }
+
+        #${ROOT_ID} .clarifai-selected {
+            font-size: 16px;
+            font-weight: 700;
+            line-height: 1.3;
+            margin: 0 28px 8px 0;
+            word-break: break-word;
         }
 
         #${ROOT_ID} .clarifai-close {
             position: absolute;
-            right: 10px;
-            top: 10px;
+            right: 8px;
+            top: 8px;
             border: 1px solid #d0d5dd;
             border-radius: 6px;
             background: #f8fafc;
             color: #101828;
             cursor: pointer;
-            padding: 2px 8px;
+            padding: 2px 7px;
             line-height: 1;
             font-weight: 700;
-        }
-
-        #${ROOT_ID} .clarifai-origin {
-            margin: 0 34px 10px 0;
-            font-size: 18px;
-            font-weight: 700;
-            line-height: 1.3;
-            color: #101828;
-            word-break: break-word;
         }
 
         #${ROOT_ID} .clarifai-pos {
