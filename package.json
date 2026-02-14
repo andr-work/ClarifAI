@@ -1,0 +1,23 @@
+{
+    "name": "clarifai",
+    "version": "1.0.0",
+    "description": "Chrome extension that explains unfamiliar words, phrases, and text in simple terms, in the same language.",
+    "homepage": "https://github.com/andr-work/ClarifAI#readme",
+    "bugs": {
+        "url": "https://github.com/andr-work/ClarifAI/issues"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/andr-work/ClarifAI.git"
+    },
+    "license": "ISC",
+    "author": "andr-work",
+    "type": "commonjs",
+    "main": "background.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "dependencies": {
+        "@types/dom-chromium-ai": "^0.0.14"
+    }
+}
