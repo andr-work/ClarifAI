@@ -3,6 +3,8 @@ const useSelectionBtn = document.getElementById("useSelectionBtn");
 const explainBtn = document.getElementById("explainBtn");
 const statusEl = document.getElementById("status");
 const resultEl = document.getElementById("result");
+const CLIENT_ID = "popup:clarifai";
+let activeRequestId = 0;
 
 function setStatus(message) {
     statusEl.textContent = message;
@@ -40,12 +42,29 @@ async function explainText() {
 
     explainBtn.disabled = true;
     setStatus("説明を生成中...");
+    const requestId = ++activeRequestId;
+
+    if (requestId > 1) {
+        chrome.runtime
+            .sendMessage({
+                type: "CLARIFAI_CANCEL_EXPLANATION",
+                clientId: CLIENT_ID,
+                requestId: requestId - 1
+            })
+            .catch(() => {});
+    }
 
     try {
         const response = await chrome.runtime.sendMessage({
             type: "CLARIFAI_EXPLAIN_TEXT",
-            text: input
+            text: input,
+            clientId: CLIENT_ID,
+            requestId
         });
+
+        if (requestId !== activeRequestId) {
+            return;
+        }
 
         if (!response?.ok) {
             throw new Error(response?.error || "Unknown error");
@@ -54,10 +73,20 @@ async function explainText() {
         setResult(response.explanation || "結果が返りませんでした。");
         setStatus("完了");
     } catch (error) {
+        if (requestId !== activeRequestId) {
+            return;
+        }
+
+        if (error?.message === "Request canceled") {
+            return;
+        }
+
         setResult("");
         setStatus(`失敗: ${error?.message || "Unknown error"}`);
     } finally {
-        explainBtn.disabled = false;
+        if (requestId === activeRequestId) {
+            explainBtn.disabled = false;
+        }
     }
 }
 

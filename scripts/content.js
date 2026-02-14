@@ -1,5 +1,6 @@
 const ROOT_ID = "clarifai-floating-root";
 const STYLE_ID = "clarifai-floating-style";
+const CLIENT_ID = `content:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 8)}`;
 
 if (!document.getElementById(ROOT_ID)) {
     setupClarifaiFloatingUI();
@@ -11,6 +12,7 @@ function setupClarifaiFloatingUI() {
     let selectedText = "";
     let selectionTimer = null;
     let requestCounter = 0;
+    let activeRequestId = null;
     let lastPointerX = null;
     let lastPointerY = null;
     let isMouseSelecting = false;
@@ -89,42 +91,6 @@ function setupClarifaiFloatingUI() {
         );
     }
 
-    function buildPrompt(text) {
-        return [
-            "You are a helpful dictionary assistant.",
-            "Explain the selected text in simple, easy-to-understand English.",
-            "Return ONLY valid JSON with this exact schema:",
-            '{"originText":"", "partOfSpeech":"", "description":"", "similar1":"", "similar2":"", "similar3":""}',
-            "Text:",
-            text,
-            "Do not include markdown or extra text.",
-        ].join("\\n\\n");
-    }
-
-    function parseExplanationResult(raw, originalText) {
-        try {
-            const jsonMatch = raw.match(/\{[\s\S]*\}/);
-            const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : raw);
-            return {
-                originText: parsed.originText || originalText,
-                partOfSpeech: parsed.partOfSpeech || "",
-                description: parsed.description || raw,
-                similar1: parsed.similar1 || "",
-                similar2: parsed.similar2 || "",
-                similar3: parsed.similar3 || "",
-            };
-        } catch {
-            return {
-                originText: originalText,
-                partOfSpeech: "",
-                description: raw,
-                similar1: "",
-                similar2: "",
-                similar3: "",
-            };
-        }
-    }
-
     function renderExplanation(data) {
         loadingEl.style.display = "none";
         selectedEl.textContent = data.originText || selectedText || "";
@@ -150,23 +116,49 @@ function setupClarifaiFloatingUI() {
         }
     }
 
-    async function generateExplanation(text) {
+    async function requestExplanation(text, requestId) {
         const input = normalizeInput(text);
 
         if (!input) {
             throw new Error("No text provided.");
         }
 
-        if (!globalThis.LanguageModel?.create) {
-            throw new Error(
-                "LanguageModel API is not available in this Chrome environment.",
-            );
+        const response = await chrome.runtime.sendMessage({
+            type: "CLARIFAI_EXPLAIN_TEXT",
+            text: input,
+            clientId: CLIENT_ID,
+            requestId,
+        });
+
+        if (!response?.ok) {
+            throw new Error(response?.error || "Unknown error");
         }
 
-        const session = await LanguageModel.create();
-        const output = await session.prompt(buildPrompt(input));
-        const normalizedOutput = output?.trim() || "No explanation returned.";
-        return parseExplanationResult(normalizedOutput, input);
+        const data = response.data || {};
+        return {
+            originText: data.originText || input,
+            partOfSpeech: data.partOfSpeech || "",
+            description: data.description || response.explanation || "",
+            similar1: data.similar1 || "",
+            similar2: data.similar2 || "",
+            similar3: data.similar3 || "",
+        };
+    }
+
+    function cancelActiveExplanationRequest() {
+        if (!activeRequestId) {
+            return;
+        }
+
+        chrome.runtime
+            .sendMessage({
+                type: "CLARIFAI_CANCEL_EXPLANATION",
+                clientId: CLIENT_ID,
+                requestId: activeRequestId,
+            })
+            .catch(() => {});
+
+        activeRequestId = null;
     }
 
     function getSelectedText() {
@@ -276,6 +268,7 @@ function setupClarifaiFloatingUI() {
     }
 
     function hidePanel() {
+        cancelActiveExplanationRequest();
         panel.style.display = "none";
         if (iconButton.style.display === "none") {
             root.style.display = "none";
@@ -315,6 +308,7 @@ function setupClarifaiFloatingUI() {
         }
 
         selectedText = input;
+        cancelActiveExplanationRequest();
         showIcon();
         showPanel();
         setStatus("説明を生成中...");
@@ -326,17 +320,25 @@ function setupClarifaiFloatingUI() {
         similarWrapEl.style.display = "none";
 
         const currentRequestId = ++requestCounter;
+        activeRequestId = currentRequestId;
 
         try {
-            const explanation = await generateExplanation(input);
+            const explanation = await requestExplanation(input, currentRequestId);
             if (currentRequestId !== requestCounter) {
                 return;
             }
 
+            activeRequestId = null;
             renderExplanation(explanation);
             setStatus("完了");
         } catch (error) {
             if (currentRequestId !== requestCounter) {
+                return;
+            }
+
+            activeRequestId = null;
+            if (error?.message === "Request canceled") {
+                loadingEl.style.display = "none";
                 return;
             }
 
@@ -422,28 +424,6 @@ function setupClarifaiFloatingUI() {
         if (message?.type === "CLARIFAI_GET_SELECTION") {
             sendResponse({ text: getSelectedText() || selectedText });
             return;
-        }
-
-        if (message?.type === "CLARIFAI_GENERATE_EXPLANATION") {
-            (async () => {
-                try {
-                    const explanation = await generateExplanation(
-                        message.text || "",
-                    );
-                    sendResponse({
-                        ok: true,
-                        explanation: explanation.description,
-                        data: explanation,
-                    });
-                } catch (error) {
-                    sendResponse({
-                        ok: false,
-                        error: error?.message || "Unknown error",
-                    });
-                }
-            })();
-
-            return true;
         }
 
         if (message?.type === "CLARIFAI_SHOW_FROM_CONTEXT_MENU") {
