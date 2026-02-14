@@ -17,12 +17,17 @@
     ],
     "content_scripts": [
         {
-            "js": ["scripts/content.js"],
+            "js": [
+                "shared/messages.js",
+                "scripts/content/ui.js",
+                "scripts/content/positioning.js",
+                "scripts/content/index.js"
+            ],
             "matches": ["<all_urls>"]
         }
     ],
     "background": {
-        "service_worker": "background.js"
+        "service_worker": "background/index.js"
     },
     "permissions": ["storage", "contextMenus", "tabs", "activeTab"],
     "host_permissions": ["http://*/*", "https://*/*"],

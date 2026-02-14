@@ -13,7 +13,7 @@
     "license": "ISC",
     "author": "andr-work",
     "type": "commonjs",
-    "main": "background.js",
+  "main": "background/index.js",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1"
     },

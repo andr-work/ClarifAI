@@ -23,7 +23,7 @@ async function getSelectionFromActiveTab() {
 
     try {
         const response = await chrome.tabs.sendMessage(activeTab.id, {
-            type: "CLARIFAI_GET_SELECTION"
+            type: ClarifaiMessages.GET_SELECTION
         });
 
         return (response?.text || "").trim();
@@ -47,7 +47,7 @@ async function explainText() {
     if (requestId > 1) {
         chrome.runtime
             .sendMessage({
-                type: "CLARIFAI_CANCEL_EXPLANATION",
+                type: ClarifaiMessages.CANCEL_EXPLANATION,
                 clientId: CLIENT_ID,
                 requestId: requestId - 1
             })
@@ -56,7 +56,7 @@ async function explainText() {
 
     try {
         const response = await chrome.runtime.sendMessage({
-            type: "CLARIFAI_EXPLAIN_TEXT",
+            type: ClarifaiMessages.EXPLAIN_TEXT,
             text: input,
             clientId: CLIENT_ID,
             requestId

@@ -14,74 +14,58 @@ body {
     padding: 14px;
 }
 
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.title-wrap {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.app-icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    flex: 0 0 auto;
+}
+
 h1 {
     margin: 0;
-    font-size: 18px;
+    font-size: 20px;
 }
 
 .subtitle {
     margin: 6px 0 12px;
-    font-size: 13px;
+    font-size: 14px;
     color: #475467;
 }
 
-label,
-h2 {
-    font-size: 13px;
-    margin-bottom: 6px;
-}
-
-textarea {
-    width: 100%;
-    box-sizing: border-box;
-    resize: vertical;
+.github-link {
+    width: 30px;
+    height: 30px;
     border: 1px solid #d0d5dd;
     border-radius: 8px;
-    padding: 10px;
-    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #101828;
     background: #fff;
+    text-decoration: none;
+    flex: 0 0 auto;
 }
 
-.actions {
-    display: flex;
-    gap: 8px;
-    margin-top: 10px;
+.github-link:hover {
+    background: #eef4ff;
+    border-color: #a4bcfd;
+    color: #0f62fe;
 }
 
-button {
-    border: 1px solid #d0d5dd;
-    background: #fff;
-    border-radius: 8px;
-    padding: 8px 10px;
-    cursor: pointer;
-    font-size: 13px;
-}
-
-button#explainBtn {
-    background: #0f62fe;
-    border-color: #0f62fe;
-    color: #fff;
-}
-
-button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.status {
-    min-height: 18px;
-    margin: 10px 0;
-    font-size: 12px;
-    color: #475467;
-}
-
-.result {
-    margin-top: 6px;
-    background: #fff;
-    border: 1px solid #d0d5dd;
-    border-radius: 8px;
-    padding: 10px;
-    font-size: 13px;
-    line-height: 1.45;
-    white-space: pre-wrap;
+.github-link svg {
+    width: 16px;
+    height: 16px;
 }
