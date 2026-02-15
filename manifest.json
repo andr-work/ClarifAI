@@ -19,6 +19,7 @@
         {
             "js": [
                 "shared/messages.js",
+                "shared/normalize.js",
                 "scripts/content/ui.js",
                 "scripts/content/positioning.js",
                 "scripts/content/index.js"
@@ -39,6 +40,6 @@
             "128": "images/icon128.png"
         },
         "default_title": "explain words and phrases in simple terms, in the same language.",
-        "default_popup": "dialogbox/index.html"
+        "default_popup": "popup/index.html"
     }
 }

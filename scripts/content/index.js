@@ -33,7 +33,11 @@ function setupClarifaiFloatingUI() {
     } = ClarifaiContentUI.createFloatingUI();
 
     function normalizeInput(value) {
-        return (value || "").trim().slice(0, 2000);
+        return globalThis.ClarifaiNormalize?.normalizeInput(value) || "";
+    }
+
+    function sanitizeOriginalInput(value) {
+        return globalThis.ClarifaiNormalize?.sanitizeOriginalInput(value) || "";
     }
 
     function isNodeInsideRoot(node) {
@@ -62,7 +66,7 @@ function setupClarifaiFloatingUI() {
             return "";
         }
 
-        return normalizeInput(window.getSelection()?.toString() || "");
+        return sanitizeOriginalInput(window.getSelection()?.toString() || "");
     }
 
     function getSelectionRect() {
@@ -88,7 +92,8 @@ function setupClarifaiFloatingUI() {
     }
 
     async function requestExplanation(text, requestId) {
-        const input = normalizeInput(text);
+        const originalInput = sanitizeOriginalInput(text);
+        const input = normalizeInput(originalInput);
 
         if (!input) {
             throw new Error("No text provided.");
@@ -96,7 +101,7 @@ function setupClarifaiFloatingUI() {
 
         const response = await chrome.runtime.sendMessage({
             type: ClarifaiMessages.EXPLAIN_TEXT,
-            text: input,
+            text: originalInput,
             clientId: CLARIFAI_CONTENT_CLIENT_ID,
             requestId,
         });
@@ -107,7 +112,7 @@ function setupClarifaiFloatingUI() {
 
         const data = response.data || {};
         return {
-            originText: data.originText || input,
+            originText: data.originText || originalInput,
             partOfSpeech: data.partOfSpeech || "",
             description: data.description || response.explanation || "",
             similar1: data.similar1 || "",
@@ -151,6 +156,7 @@ function setupClarifaiFloatingUI() {
     function hidePanel() {
         cancelActiveExplanationRequest();
         hidePanelView();
+        hideIcon();
     }
 
     function updateSelectionState() {
@@ -174,7 +180,7 @@ function setupClarifaiFloatingUI() {
     }
 
     async function explain(text) {
-        const input = normalizeInput(text || selectedText);
+        const input = sanitizeOriginalInput(text || selectedText);
 
         if (!input) {
             setStatus("説明するテキストがありません。");

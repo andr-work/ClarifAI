@@ -1,4 +1,4 @@
-importScripts("../shared/messages.js", "llm.js");
+importScripts("../shared/messages.js", "../shared/normalize.js", "llm.js");
 
 const CONTEXT_MENU_ID = "clarifai-explain-selection";
 const activeRequests = new Map();
@@ -26,7 +26,8 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
         return;
     }
 
-    const selectedText = ClarifaiLLM.normalizeInput(info.selectionText || "");
+    const selectedText =
+        ClarifaiNormalize.sanitizeOriginalInput(info.selectionText || "");
     if (!selectedText) {
         return;
     }

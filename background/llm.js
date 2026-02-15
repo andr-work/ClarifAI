@@ -12,7 +12,7 @@ const ClarifaiLLM = (() => {
         "Return ONLY valid JSON with this exact schema:",
         '{"originText":"", "partOfSpeech":"", "description":"", "similar1":"", "similar2":"", "similar3":""}',
         "Set partOfSpeech to one short label like noun, verb, adjective, phrase, sentence.",
-        "If the input is a full sentence, partOfSpeech must be sentence.",
+        "If partOfSpeech is sentence, describe the whole sentence meaning clearly and simply.",
         "similar1-3 must be easy alternatives (single words or short phrases).",
         "Do not include markdown or extra text.",
     ].join("\n\n");
@@ -39,7 +39,11 @@ const ClarifaiLLM = (() => {
     };
 
     function normalizeInput(value) {
-        return (value || "").trim().slice(0, 2000);
+        return globalThis.ClarifaiNormalize?.normalizeInput(value) || "";
+    }
+
+    function sanitizeOriginalInput(value) {
+        return globalThis.ClarifaiNormalize?.sanitizeOriginalInput(value) || "";
     }
 
     function getClientKey(sender, message) {
@@ -113,36 +117,12 @@ const ClarifaiLLM = (() => {
     }
 
     function parseExplanationResult(raw, originalText) {
-        function looksLikeSentence(text) {
-            const value = (text || "").trim();
-            if (!value) {
-                return false;
-            }
-
-            const words = value.split(/\s+/).filter(Boolean);
-            const hasSentencePunctuation = /[.!?]["')\]]?$/.test(value);
-            return words.length >= 5 || (words.length >= 3 && hasSentencePunctuation);
-        }
-
-        function normalizePartOfSpeech(partOfSpeech, text) {
-            const normalized = String(partOfSpeech || "").trim().toLowerCase();
-            if (!looksLikeSentence(text)) {
-                return normalized;
-            }
-
-            if (!normalized || normalized === "phrase") {
-                return "sentence";
-            }
-
-            return normalized;
-        }
-
         try {
             const jsonMatch = raw.match(/\{[\s\S]*\}/);
             const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : raw);
             return {
                 originText: originalText,
-                partOfSpeech: normalizePartOfSpeech(parsed.partOfSpeech, originalText),
+                partOfSpeech: String(parsed.partOfSpeech || "").trim().toLowerCase(),
                 description: parsed.description || raw,
                 similar1: parsed.similar1 || "",
                 similar2: parsed.similar2 || "",
@@ -161,7 +141,8 @@ const ClarifaiLLM = (() => {
     }
 
     async function generateExplanationWithAbort(text, signal) {
-        const input = normalizeInput(text);
+        const originalInput = sanitizeOriginalInput(text);
+        const input = normalizeInput(originalInput);
         let session;
 
         if (!input) {
@@ -179,7 +160,7 @@ const ClarifaiLLM = (() => {
                 typeof output === "string" ? output.trim() : JSON.stringify(output);
             return parseExplanationResult(
                 normalizedOutput || "No explanation returned.",
-                input,
+                originalInput,
             );
         } finally {
             try {
